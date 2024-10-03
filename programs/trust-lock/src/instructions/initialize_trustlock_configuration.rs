@@ -20,7 +20,7 @@ pub struct InitializeTrustLockConfig<'info> {
         address = crate::admin::id() @ ErrorCode::NotApproved)]
     pub admin: Signer<'info>,
 
-    #[account(init, payer=admin, seeds=[INTIALIZE_CONFIG.as_ref()], bump, space= TrustLockConfig::LEN)]
+    #[account(init, payer=admin, seeds=[INTIALIZE_CONFIG.as_ref(), admin.key().as_ref()], bump, space= TrustLockConfig::LEN)]
     pub trustlock_config_account: Account<'info, TrustLockConfig>,
 
     pub system_program: Program<'info, System>,

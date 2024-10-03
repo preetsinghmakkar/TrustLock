@@ -55,12 +55,6 @@ pub mod trust_lock {
         Ok(())
     }
 
-    // Admin Should create a Token Account in which user's are going to store their tokens.
-    pub fn create_token_account(_ctx: Context<CreateToken>) -> Result<()> {
-        instructions::create_token(_ctx)?;
-        Ok(())
-    }
-
     pub fn create_vault(_ctx: Context<CreateVault>) -> Result<()> {
         instructions::create_vault(_ctx)?;
         Ok(())
