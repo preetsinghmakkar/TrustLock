@@ -7,8 +7,11 @@ pub use create_trustlock_account::*;
 pub mod create_order;
 pub use create_order::*;
 
-pub mod initialize_escrow_contract;
-pub use initialize_escrow_contract::*;
+pub mod create_vault;
+pub use create_vault::*;
 
 pub mod create_token;
 pub use create_token::*;
+
+pub mod update_whitelist;
+pub use update_whitelist::*;

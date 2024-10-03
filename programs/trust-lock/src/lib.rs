@@ -29,6 +29,15 @@ pub mod trust_lock {
         Ok(())
     }
 
+    //Update Allowed Tokens WhiteList
+    pub fn update_whitelist(
+        _ctx: Context<UpdateWhitelist>,
+        new_whitelist: Vec<Pubkey>,
+    ) -> Result<()> {
+        instructions::update_whitelist(_ctx, new_whitelist)?;
+        Ok(())
+    }
+
     // Create My Account
     pub fn create_trustlock_account(_ctx: Context<CreateTrustLockAccount>) -> Result<()> {
         instructions::create_trustlock_account(_ctx)?;
@@ -52,9 +61,8 @@ pub mod trust_lock {
         Ok(())
     }
 
-    // Initialize Escrow Contract
-    pub fn initalize_escrow_account_for_sol(_ctx: Context<InitializeEscrowContract>) -> Result<()> {
-        instructions::initialize_escrow_contract(_ctx)?;
+    pub fn create_vault(_ctx: Context<CreateVault>) -> Result<()> {
+        instructions::create_vault(_ctx)?;
         Ok(())
     }
 }
