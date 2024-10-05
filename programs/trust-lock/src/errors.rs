@@ -7,4 +7,13 @@ pub enum ErrorCode {
 
     #[msg("Token Not Supported")]
     TokenNotSupported,
+
+    #[msg("Overflow")]
+    OverflowError,
+
+    #[msg("Underflow")]
+    UnderflowError,
+
+    #[msg("Insufficient Funds")]
+    InsufficientFunds,
 }

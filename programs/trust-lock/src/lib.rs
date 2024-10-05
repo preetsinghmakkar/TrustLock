@@ -50,8 +50,9 @@ pub mod trust_lock {
         _demand: String,
         _released_on: Option<u64>,
         _order_fulfiler: Option<Pubkey>,
+        _amount: u64,
     ) -> Result<()> {
-        instructions::create_order(_ctx, _demand, _released_on, _order_fulfiler)?;
+        instructions::create_order(_ctx, _demand, _released_on, _order_fulfiler, _amount)?;
         Ok(())
     }
 

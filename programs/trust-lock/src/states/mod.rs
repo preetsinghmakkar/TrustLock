@@ -9,3 +9,6 @@ pub use create_order_account_state::*;
 
 pub mod create_vault_state;
 pub use create_vault_state::*;
+
+pub mod user_asset_details;
+pub use user_asset_details::*;
