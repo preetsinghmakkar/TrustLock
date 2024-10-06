@@ -48,16 +48,34 @@ pub mod trust_lock {
     pub fn create_order(
         _ctx: Context<CreateOrder>,
         _demand: String,
-        _released_on: Option<u64>,
+        _release_on: Option<u64>,
         _order_fulfiler: Option<Pubkey>,
         _amount: u64,
     ) -> Result<()> {
-        instructions::create_order(_ctx, _demand, _released_on, _order_fulfiler, _amount)?;
+        instructions::create_order(_ctx, _demand, _release_on, _order_fulfiler, _amount)?;
         Ok(())
     }
 
+    // In this vault user will Store their Assets.
+    // Ony Admin can initialize a vault for a particular token.
     pub fn create_vault(_ctx: Context<CreateVault>) -> Result<()> {
         instructions::create_vault(_ctx)?;
+        Ok(())
+    }
+
+    //Pitch
+    pub fn pitch_for_order(_ctx: Context<PitchForOrder>, order_id: u64) -> Result<()> {
+        instructions::pitch_for_order(_ctx, order_id)?;
+        Ok(())
+    }
+
+    pub fn choose_pitcher(
+        _ctx: Context<ChoosePitcher>,
+        _order_id: u64,
+        _pitcher: Pubkey,
+        release_on: Option<i64>,
+    ) -> Result<()> {
+        instructions::choose_pitcher(_ctx, _order_id, _pitcher, release_on)?;
         Ok(())
     }
 }

@@ -16,4 +16,16 @@ pub enum ErrorCode {
 
     #[msg("Insufficient Funds")]
     InsufficientFunds,
+
+    #[msg("Already Pitched")]
+    AlreadyPitched,
+
+    #[msg("Order Owner is not Correct")]
+    NotValidOwner,
+
+    #[msg("Order Locked - No More Pitching Allowed")]
+    OrderLocked,
+
+    #[msg("Invalid Release Time")]
+    InvalidReleaseTime,
 }

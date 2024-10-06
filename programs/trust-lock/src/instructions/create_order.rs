@@ -1,13 +1,16 @@
 use crate::constants::{FulfillerStatus, OrderStatus};
 use crate::errors::ErrorCode;
-use crate::{constants::*, CreateOrderAccount, TrustLockConfig, UserAssetDetails};
+use crate::{
+    constants::*, CreateOrderAccount, CreateTrustLockAccountState, TrustLockConfig,
+    UserAssetDetails,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 pub fn create_order(
     _ctx: Context<CreateOrder>,
     _demand: String,
-    _released_on: Option<u64>,       // Use Option for optional fields
+    _release_on: Option<u64>,        // Use Option for optional fields
     _order_fulfiler: Option<Pubkey>, // Option type to handle missing values
     _amount: u64,
 ) -> Result<()> {
@@ -16,6 +19,8 @@ pub fn create_order(
     let user_token_account = &_ctx.accounts.user_token_account;
     let token_vault_account = &mut _ctx.accounts.token_vault_account;
     let user_asset_details = &mut _ctx.accounts.user_asset_details;
+    let signer = &mut _ctx.accounts.signer;
+    let trustlock_account = &mut _ctx.accounts.trustlock_account;
 
     if user_token_account.amount < _amount {
         return Err(error!(ErrorCode::InsufficientFunds));
@@ -29,11 +34,13 @@ pub fn create_order(
 
     create_order_account.demand = _demand;
 
+    create_order_account.created_by = signer.key();
+
     create_order_account.created_at = Clock::get()?.unix_timestamp;
 
-    create_order_account.released_on = _released_on.map(|ro| ro as i64).unwrap_or(0);
+    create_order_account.release_on = _release_on.map(|ro| ro as i64).unwrap_or(0);
 
-    create_order_account.order_status = OrderStatus::Pending;
+    create_order_account.order_status = OrderStatus::CREATED;
 
     create_order_account.pitchers = Vec::new();
 
@@ -77,6 +84,10 @@ pub fn create_order(
         });
     }
 
+    trustlock_account
+        .my_opened_orders
+        .push(trustlock_config_account.order_id);
+
     Ok(())
 }
 
@@ -85,7 +96,7 @@ pub struct CreateOrder<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, seeds=[CREATE_ORDER.as_ref(), signer.key().as_ref()], bump, space=CreateOrderAccount::LEN)]
+    #[account(init, payer = signer, seeds=[CREATE_ORDER.as_ref(), trustlock_config_account.order_id.to_le_bytes().as_ref()], bump, space=CreateOrderAccount::LEN)]
     pub create_order_account: Account<'info, CreateOrderAccount>,
 
     #[account(mut)]
@@ -102,6 +113,9 @@ pub struct CreateOrder<'info> {
 
     #[account(init, payer = signer, seeds = [CREATE_ORDER.as_ref(), signer.key().as_ref()], bump, space = UserAssetDetails::LEN)]
     pub user_asset_details: Account<'info, UserAssetDetails>,
+
+    #[account(mut, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump)]
+    pub trustlock_account: Box<Account<'info, CreateTrustLockAccountState>>,
 
     pub token_program: Program<'info, Token>,
 

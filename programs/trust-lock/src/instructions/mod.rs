@@ -12,3 +12,9 @@ pub use create_vault::*;
 
 pub mod update_whitelist;
 pub use update_whitelist::*;
+
+pub mod pitch_for_order;
+pub use pitch_for_order::*;
+
+pub mod choose_pitcher;
+pub use choose_pitcher::*;

@@ -9,10 +9,15 @@ pub const MAX_CONTRIBUTIONS: usize = 100;
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum OrderStatus {
-    Pending,
-    Fulfilled,
-    Cancelled,
+    CREATED,
+    PROCESSING,
+    PITCHED,
+    CLOSED,
+    FULFILLED,
+    CANCELLED,
 }
+
+// Change Fulfiler Status and Add Like - OrderPicked, OrderDelivered, OrderProcessing
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum FulfillerStatus {

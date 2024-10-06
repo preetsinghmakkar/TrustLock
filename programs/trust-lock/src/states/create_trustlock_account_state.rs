@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 pub struct CreateTrustLockAccountState {
     pub holder: Pubkey,
     pub account_no: u64,
-    pub opened_orders: Vec<u64>,
+    pub my_opened_orders: Vec<u64>,
     pub my_pitches: Vec<u64>,
 }
 
