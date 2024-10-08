@@ -46,7 +46,7 @@ pub fn create_order(
 
     create_order_account.order_fulfiller = _order_fulfiler.unwrap_or_else(Pubkey::default);
 
-    create_order_account.fulfiller_status = FulfillerStatus::Inactive;
+    create_order_account.fulfiller_status = FulfillerStatus::INACTIVE;
 
     // After Creating Order User should transfer money to the vault.
 

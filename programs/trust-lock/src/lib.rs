@@ -78,4 +78,19 @@ pub mod trust_lock {
         instructions::choose_pitcher(_ctx, _order_id, _pitcher, release_on)?;
         Ok(())
     }
+
+    pub fn order_completed(_ctx: Context<OrderCompleted>) -> Result<()> {
+        instructions::order_completed(_ctx)?;
+        Ok(())
+    }
+
+    pub fn order_review_by_owner(_ctx: Context<OrderReview>) -> Result<()> {
+        instructions::order_review_by_owner(_ctx)?;
+        Ok(())
+    }
+
+    pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
+        instructions::claim_prize(_ctx)?;
+        Ok(())
+    }
 }

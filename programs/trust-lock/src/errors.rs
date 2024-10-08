@@ -28,4 +28,10 @@ pub enum ErrorCode {
 
     #[msg("Invalid Release Time")]
     InvalidReleaseTime,
+
+    #[msg("You are not the Fulfiler of this order")]
+    WrongFulfiller,
+
+    #[msg("Not Authorized To Review")]
+    NotAuthorizedToReview,
 }

@@ -21,8 +21,10 @@ pub enum OrderStatus {
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum FulfillerStatus {
-    Active,
-    Inactive,
+    INACTIVE,
+    PROCESSING,
+    FULFILLED,
+    CALCELLED,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]

@@ -1,3 +1,4 @@
+use crate::constants::FulfillerStatus;
 use crate::errors::ErrorCode;
 
 use crate::{
@@ -27,6 +28,7 @@ pub fn choose_pitcher(
     }
 
     order.order_fulfiller = _pitcher;
+    order.fulfiller_status = FulfillerStatus::PROCESSING;
 
     order.locked = true;
 
