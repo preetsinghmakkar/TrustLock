@@ -91,4 +91,9 @@ pub mod trust_lock {
         instructions::claim_prize(_ctx)?;
         Ok(())
     }
+
+    pub fn close_order(_ctx: Context<CloseOrder>) -> Result<()> {
+        instructions::close_order(_ctx)?;
+        Ok(())
+    }
 }

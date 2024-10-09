@@ -27,3 +27,6 @@ pub use order_review_by_owner::*;
 
 pub mod claim_prize;
 pub use claim_prize::*;
+
+pub mod close_order;
+pub use close_order::*;

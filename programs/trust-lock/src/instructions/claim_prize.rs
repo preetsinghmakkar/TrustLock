@@ -5,11 +5,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
-    let signer = &_ctx.accounts.signer;
-    let order = &_ctx.accounts.order;
-    let order_owner_asset_details = &_ctx.accounts.order_owner_asset_details;
-    let token_vault_account = &_ctx.accounts.token_vault_account;
-    let fulfiller_token_account = &_ctx.accounts.fulfiller_token_account;
+    let signer = &mut _ctx.accounts.signer;
+    let order = &mut _ctx.accounts.order;
+    let order_owner_asset_details = &mut _ctx.accounts.order_owner_asset_details;
+    let token_vault_account = &mut _ctx.accounts.token_vault_account;
+    let fulfiller_token_account = &mut _ctx.accounts.fulfiller_token_account;
 
     // Authorization checks
     if order.order_fulfiller != signer.key()

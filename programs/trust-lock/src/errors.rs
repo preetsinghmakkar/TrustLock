@@ -43,4 +43,13 @@ pub enum ErrorCode {
 
     #[msg("Contribution not found")]
     ContributionNotFound,
+
+    #[msg("Not Authorized To Close Order")]
+    NotAuthorizedToCloseOrder,
+
+    #[msg("Fulfiler Not Fulfilled the Order")]
+    FulfillerNotFulfilled,
+
+    #[msg("Order Already Closed or Fulfilled")]
+    OrderAlreadyClosedOrFulfilled,
 }

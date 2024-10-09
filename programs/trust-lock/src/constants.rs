@@ -24,7 +24,7 @@ pub enum FulfillerStatus {
     INACTIVE,
     PROCESSING,
     FULFILLED,
-    CALCELLED,
+    CANCELLED,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
