@@ -48,11 +48,10 @@ pub mod trust_lock {
     pub fn create_order(
         _ctx: Context<CreateOrder>,
         _demand: String,
-        _release_on: Option<u64>,
         _order_fulfiler: Option<Pubkey>,
         _amount: u64,
     ) -> Result<()> {
-        instructions::create_order(_ctx, _demand, _release_on, _order_fulfiler, _amount)?;
+        instructions::create_order(_ctx, _demand, _order_fulfiler, _amount)?;
         Ok(())
     }
 
@@ -73,9 +72,8 @@ pub mod trust_lock {
         _ctx: Context<ChoosePitcher>,
         _order_id: u64,
         _pitcher: Pubkey,
-        release_on: Option<i64>,
     ) -> Result<()> {
-        instructions::choose_pitcher(_ctx, _order_id, _pitcher, release_on)?;
+        instructions::choose_pitcher(_ctx, _order_id, _pitcher)?;
         Ok(())
     }
 

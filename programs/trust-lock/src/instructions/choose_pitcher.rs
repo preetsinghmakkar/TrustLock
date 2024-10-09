@@ -11,20 +11,12 @@ pub fn choose_pitcher(
     _ctx: Context<ChoosePitcher>,
     _order_id: u64,
     _pitcher: Pubkey,
-    _release_on: Option<i64>,
 ) -> Result<()> {
     let order = &mut _ctx.accounts.order;
     let signer = &mut _ctx.accounts.signer;
 
     if order.created_by != signer.key() {
         return Err(error!(ErrorCode::NotValidOwner));
-    }
-
-    // Check if release_on is provided and compare timestamps if so
-    if let Some(release_on_time) = _release_on {
-        if order.created_at > release_on_time {
-            return Err(error!(ErrorCode::InvalidReleaseTime));
-        }
     }
 
     order.order_fulfiller = _pitcher;

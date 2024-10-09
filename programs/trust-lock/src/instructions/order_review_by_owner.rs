@@ -10,7 +10,7 @@ pub fn order_review_by_owner(_ctx: Context<OrderReview>) -> Result<()> {
     let signer = &mut _ctx.accounts.signer;
     let order = &mut _ctx.accounts.order;
 
-    if order.fulfiller_status != FulfillerStatus::FULFILLED && order.created_by != signer.key() {
+    if order.fulfiller_status != FulfillerStatus::FULFILLED || order.created_by != signer.key() {
         return Err(error!(ErrorCode::NotAuthorizedToReview));
     }
 

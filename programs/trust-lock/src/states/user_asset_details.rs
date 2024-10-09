@@ -12,5 +12,5 @@ impl UserAssetDetails {
     32 + // User Pubkey
     4 + // Length of contributions vector (u32)
     // Add size of each TokenContribution as needed
-    (32 + 8 + 32 + 8) * MAX_CONTRIBUTIONS;
+    (32 + 8 + 8 + 32 + 8) * MAX_CONTRIBUTIONS;
 }

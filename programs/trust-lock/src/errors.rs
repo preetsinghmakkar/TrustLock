@@ -34,4 +34,13 @@ pub enum ErrorCode {
 
     #[msg("Not Authorized To Review")]
     NotAuthorizedToReview,
+
+    #[msg("Not Authorized to Claim Prize")]
+    NotAuthorizedToClaimPrize,
+
+    #[msg("Invalid Vault Account")]
+    InvalidVaultAccount,
+
+    #[msg("Contribution not found")]
+    ContributionNotFound,
 }

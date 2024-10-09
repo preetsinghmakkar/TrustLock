@@ -8,12 +8,12 @@ pub struct CreateOrderAccount {
     pub created_by: Pubkey,
     pub demand: String,
     pub created_at: i64,
-    pub release_on: i64,
     pub order_status: OrderStatus,
     pub pitchers: Vec<Pubkey>,
     pub order_fulfiller: Pubkey,
     pub fulfiller_status: FulfillerStatus,
     pub locked: bool,
+    pub amount: u64,
 }
 
 impl CreateOrderAccount {

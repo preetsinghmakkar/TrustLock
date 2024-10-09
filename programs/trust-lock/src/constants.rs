@@ -29,6 +29,7 @@ pub enum FulfillerStatus {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct TokenContribution {
+    pub order_id: u64,
     pub mint: Pubkey,   // The token mint address
     pub amount: u64,    // Amount of tokens contributed
     pub vault: Pubkey,  // The vault where tokens are stored

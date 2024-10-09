@@ -9,8 +9,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 pub fn create_order(
     _ctx: Context<CreateOrder>,
-    _demand: String,
-    _release_on: Option<u64>,        // Use Option for optional fields
+    _demand: String,                 // Use Option for optional fields
     _order_fulfiler: Option<Pubkey>, // Option type to handle missing values
     _amount: u64,
 ) -> Result<()> {
@@ -36,9 +35,9 @@ pub fn create_order(
 
     create_order_account.created_by = signer.key();
 
-    create_order_account.created_at = Clock::get()?.unix_timestamp;
+    create_order_account.amount = _amount;
 
-    create_order_account.release_on = _release_on.map(|ro| ro as i64).unwrap_or(0);
+    create_order_account.created_at = Clock::get()?.unix_timestamp;
 
     create_order_account.order_status = OrderStatus::CREATED;
 
@@ -77,6 +76,7 @@ pub fn create_order(
     } else {
         // Add a new contribution
         user_asset_details.contributions.push(TokenContribution {
+            order_id: create_order_account.order_id,
             mint: token_mint,
             amount: _amount,
             vault: token_vault_account.key(),
