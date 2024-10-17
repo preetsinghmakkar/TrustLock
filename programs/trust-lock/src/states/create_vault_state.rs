@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 #[account]
+#[derive(Default, Debug)]
 pub struct CreateVaultState {
     /// Bump to identify PDA
     pub bump: u8,

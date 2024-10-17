@@ -11,9 +11,11 @@ pub fn update_whitelist(_ctx: Context<UpdateWhitelist>, _new_whitelist: Vec<Pubk
 
 #[derive(Accounts)]
 pub struct UpdateWhitelist<'info> {
-    #[account(mut,  address = crate::admin::id() @ ErrorCode::NotApproved)]
+    #[account(mut,
+        address = crate::admin::id() @ ErrorCode::NotApproved)]
     pub admin: Signer<'info>,
 
+    #[account(mut)]
     pub trustlock_config_account: Box<Account<'info, TrustLockConfig>>,
 
     pub system_program: Program<'info, System>,

@@ -1,4 +1,4 @@
-use crate::errors::ErrorCode;
+use crate::{errors::ErrorCode, TrustLockConfig};
 use anchor_lang::prelude::*;
 
 use crate::{constants::*, CreateTrustLockAccountState};
@@ -12,7 +12,6 @@ pub fn create_trustlock_account(_ctx: Context<CreateTrustLockAccount>) -> Result
         .ok_or_else(|| error!(ErrorCode::OverflowError))?;
 
     // Initialize opened_orders and my_pitches as empty vectors
-
     create_trustlock_account.my_opened_orders = Vec::new();
     create_trustlock_account.my_pitches = Vec::new();
 
@@ -24,7 +23,10 @@ pub struct CreateTrustLockAccount<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,
 
-    #[account(init, payer = signer, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump, space = CreateTrustLockAccountState::LEN)]
+    #[account(mut)]
+    pub trust_lock_config_account: Box<Account<'info, TrustLockConfig>>,
+
+    #[account(init, payer = signer, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump, space = 8 + CreateTrustLockAccountState::INIT_SPACE)]
     pub create_trustlock_account: Account<'info, CreateTrustLockAccountState>,
 
     pub system_program: Program<'info, System>,

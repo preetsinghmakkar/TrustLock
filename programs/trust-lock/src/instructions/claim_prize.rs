@@ -2,7 +2,8 @@ use crate::constants::{FulfillerStatus, OrderStatus, CREATE_ORDER};
 use crate::errors::ErrorCode;
 use crate::{CreateOrderAccount, UserAssetDetails};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Transfer};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 
 pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     let signer = &mut _ctx.accounts.signer;
@@ -77,16 +78,16 @@ pub struct ClaimPrize<'info> {
     pub order_owner_asset_details: Account<'info, UserAssetDetails>,
 
     #[account(mut)]
-    pub token_vault_account: Box<Account<'info, TokenAccount>>,
+    pub token_vault_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
         constraint = fulfiller_token_account.mint == token_vault_account.mint,
         constraint = fulfiller_token_account.owner == signer.key()
     )]
-    pub fulfiller_token_account: Box<Account<'info, TokenAccount>>,
+    pub fulfiller_token_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 
     pub system_program: Program<'info, System>,
 }

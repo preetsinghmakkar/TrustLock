@@ -5,7 +5,8 @@ use crate::{
     UserAssetDetails,
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Transfer};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 pub fn create_order(
     _ctx: Context<CreateOrder>,
@@ -15,7 +16,7 @@ pub fn create_order(
 ) -> Result<()> {
     let create_order_account = &mut _ctx.accounts.create_order_account;
     let trustlock_config_account = &mut _ctx.accounts.trustlock_config_account;
-    let user_token_account = &_ctx.accounts.user_token_account;
+    let user_token_account = &mut _ctx.accounts.user_token_account;
     let token_vault_account = &mut _ctx.accounts.token_vault_account;
     let user_asset_details = &mut _ctx.accounts.user_asset_details;
     let signer = &mut _ctx.accounts.signer;
@@ -49,7 +50,7 @@ pub fn create_order(
 
     // After Creating Order User should transfer money to the vault.
 
-    // Token transfer via CPI
+    // // Token transfer via CPI
     let cpi_accounts = Transfer {
         from: user_token_account.to_account_info(),
         to: token_vault_account.to_account_info(),
@@ -68,7 +69,6 @@ pub fn create_order(
         .iter_mut()
         .find(|c| c.mint == token_mint)
     {
-        // Update existing contribution
         contribution.amount = contribution
             .amount
             .checked_add(_amount)
@@ -100,13 +100,13 @@ pub struct CreateOrder<'info> {
     pub create_order_account: Account<'info, CreateOrderAccount>,
 
     #[account(mut)]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
+    pub user_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut)]
-    pub token_mint: Box<Account<'info, Mint>>,
+    pub token_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
-    pub token_vault_account: Box<Account<'info, TokenAccount>>,
+    #[account(mut)] // Ensure the vault already exists, pre-created by admin
+    pub token_vault_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(mut, seeds=[INTIALIZE_CONFIG.as_ref()], bump)]
     pub trustlock_config_account: Box<Account<'info, TrustLockConfig>>,
@@ -117,7 +117,7 @@ pub struct CreateOrder<'info> {
     #[account(mut, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump)]
     pub trustlock_account: Box<Account<'info, CreateTrustLockAccountState>>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
 
     pub system_program: Program<'info, System>,
 }
