@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-trust_lock = "9cZWC3nMxmkQGYw7JGMeaeaUmmQ3bfByaoZwvmyadvGx"
+trust_lock = "CDyiBHjDWyNEPmsnptLPmwh6oUXNEJ3CVgpuUW3Rhbuf"
 
 [registry]
 url = "https://api.apr.dev"

@@ -6,7 +6,7 @@ pub mod constants;
 pub mod errors;
 pub mod instructions;
 pub mod states;
-declare_id!("9cZWC3nMxmkQGYw7JGMeaeaUmmQ3bfByaoZwvmyadvGx");
+declare_id!("CDyiBHjDWyNEPmsnptLPmwh6oUXNEJ3CVgpuUW3Rhbuf");
 
 pub mod admin {
     use anchor_lang::prelude::declare_id;
