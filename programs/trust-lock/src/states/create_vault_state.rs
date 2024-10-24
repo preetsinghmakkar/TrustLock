@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
 #[account]
-#[derive(Default, Debug)]
+#[derive(InitSpace, Default, Debug)]
 pub struct CreateVaultState {
     /// Bump to identify PDA
     pub bump: u8,
@@ -15,8 +15,6 @@ pub struct CreateVaultState {
 }
 
 impl CreateVaultState {
-    pub const LEN: usize = 8 + 1 + 32 + 32;
-
     pub fn initialize_vault(
         &mut self,
         bump: u8,

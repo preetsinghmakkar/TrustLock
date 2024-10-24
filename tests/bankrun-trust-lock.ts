@@ -10,14 +10,18 @@ import {
   ProgramTestContext,
 } from "solana-bankrun";
 
-import { createMint, mintTo } from "spl-token-bankrun";
+import {
+  createAssociatedTokenAccount,
+  createMint,
+  mintTo,
+} from "spl-token-bankrun";
 import { PublicKey, Keypair, SystemProgram } from "@solana/web3.js";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
 import IDL from "../target/idl/trust_lock.json";
 import { TrustLock } from "../target/types/trust_lock";
 import { SYSTEM_PROGRAM_ID } from "@coral-xyz/anchor/dist/cjs/native/system";
-import { expect } from "chai";
+import { assert, expect } from "chai";
 
 describe("Trust Lock Tests", () => {
   let context: ProgramTestContext;
@@ -25,9 +29,14 @@ describe("Trust Lock Tests", () => {
   let provider: BankrunProvider;
   let initialize_trustlock_configuration: PublicKey;
   let create_trustlock_account: PublicKey;
+  let create_vault_state: PublicKey;
+  let token_vault: PublicKey;
+  let create_order_account: PublicKey;
   let program: Program<TrustLock>;
   let admin: Keypair;
   let user: Keypair;
+  let mint: PublicKey;
+  let banksClient: BanksClient;
   let mint_whitelist = [
     new PublicKey("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"),
     new PublicKey("EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm"),
@@ -48,8 +57,6 @@ describe("Trust Lock Tests", () => {
     ]);
     admin = Keypair.fromSecretKey(adminPrivateKey);
     user = new anchor.web3.Keypair();
-
-    console.log("User Before : ", user.publicKey.toBase58());
 
     // Initialize the context first
     context = await startAnchor(
@@ -76,6 +83,18 @@ describe("Trust Lock Tests", () => {
         },
       ]
     );
+
+    banksClient = context.banksClient;
+    mint = await createMint(banksClient, admin, admin.publicKey, null, 9);
+
+    console.log("Mint : ", mint.toBase58());
+
+    // Comment this if you want to check unsupported tokens
+    mint_whitelist = [
+      new PublicKey("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"),
+      new PublicKey("EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm"),
+      new PublicKey(mint.toBase58()),
+    ];
 
     // Initialize the provider after context
     provider = new BankrunProvider(context);
@@ -108,6 +127,20 @@ describe("Trust Lock Tests", () => {
       program.programId
     );
 
+    [create_vault_state] = PublicKey.findProgramAddressSync(
+      [Buffer.from("Create_Vault"), Buffer.from(admin.publicKey.toBuffer())],
+      program.programId
+    );
+
+    [token_vault] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("Create_Vault"),
+        Buffer.from(admin.publicKey.toBuffer()),
+        Buffer.from(mint.toBuffer()),
+      ],
+      program.programId
+    );
+
     // Initialize Config Account
     let tx = await program.methods
       .initializeTrustlockConfiguration(index, mint_whitelist)
@@ -118,6 +151,21 @@ describe("Trust Lock Tests", () => {
       .rpc({ commitment: "confirmed" });
 
     console.log(tx);
+
+    const trust_lock_config_data = await program.account.trustLockConfig.fetch(
+      initialize_trustlock_configuration,
+      "confirmed"
+    );
+
+    const orderIdBuffer = Buffer.alloc(8);
+    orderIdBuffer.writeBigUInt64LE(
+      BigInt(trust_lock_config_data.orderId.toNumber())
+    );
+
+    [create_order_account] = PublicKey.findProgramAddressSync(
+      [Buffer.from("Create_Order"), Buffer.from(orderIdBuffer)],
+      program.programId
+    );
   });
 
   it("Admin Should Initialize Config Account", async () => {
@@ -196,4 +244,121 @@ describe("Trust Lock Tests", () => {
 
     expect(trust_lock_account_data.accountNo.toNumber()).to.equal(0);
   });
+
+  it("Admin should create a vault for the token", async () => {
+    let tx = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    console.log("Transaction: ", tx);
+
+    // Fetch and verify the vault state
+    const vaultState = await program.account.createVaultState.fetch(
+      create_vault_state
+    );
+
+    expect(vaultState.tokenMint.toBase58()).to.equal(mint.toBase58());
+  });
+
+  it("It Should Create Order", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx);
+
+    const order_account_data = await program.account.createOrderAccount.fetch(
+      create_order_account,
+      "confirmed"
+    );
+
+    const user_trust_lock_account =
+      await program.account.createTrustLockAccountState.fetch(
+        create_trustlock_account,
+        "confirmed"
+      );
+
+    console.log("Order Account Data:", JSON.stringify(order_account_data));
+
+    console.log(
+      "User TrustLock Account Data:",
+      JSON.stringify(user_trust_lock_account)
+    );
+
+    expect(order_account_data.orderId.toNumber()).to.equal(0); // Verify Order ID
+    expect(order_account_data.createdBy.toBase58()).to.equal(
+      user.publicKey.toBase58()
+    );
+    expect(order_account_data.amount.toNumber()).to.equal(100000000000);
+
+    expect(user_trust_lock_account.accountNo.toNumber()).to.equal(0);
+  });
+
+  it("Pitch for Order", async () => {});
 });
