@@ -1,16 +1,20 @@
-use crate::constants::{FulfillerStatus, OrderStatus, CREATE_ORDER};
+use crate::constants::{
+    FulfillerStatus, OrderStatus, CREATE_ORDER, CREATE_VAULT, CREATE_VAULT_STATE,
+    INITIALIZE_TRUSTLOCK_ACCOUNT,
+};
 use crate::errors::ErrorCode;
-use crate::{CreateOrderAccount, UserAssetDetails};
+use crate::{CreateOrderAccount, CreateTrustLockAccountState, CreateVaultState};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Transfer};
-use anchor_spl::token_interface::{TokenAccount, TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     let signer = &mut _ctx.accounts.signer;
     let order = &mut _ctx.accounts.order;
-    let order_owner_asset_details = &mut _ctx.accounts.order_owner_asset_details;
+    let trust_lock_account = &mut _ctx.accounts.trustlock_account;
     let token_vault_account = &mut _ctx.accounts.token_vault_account;
     let fulfiller_token_account = &mut _ctx.accounts.fulfiller_token_account;
+    let create_vault_state = &mut _ctx.accounts.create_vault_state;
 
     // Authorization checks
     if order.order_fulfiller != signer.key()
@@ -21,7 +25,7 @@ pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     }
 
     // Find the TokenContribution matching the order_id
-    let token_contribution = order_owner_asset_details
+    let token_contribution = trust_lock_account
         .contributions
         .iter()
         .find(|contribution| contribution.order_id == order.order_id)
@@ -37,26 +41,29 @@ pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     let cpi_accounts = Transfer {
         from: token_vault_account.to_account_info(),
         to: fulfiller_token_account.to_account_info(),
-        authority: order_owner_asset_details.to_account_info(), // Assuming the vault is owned by the UserAssetDetails account
+        authority: create_vault_state.to_account_info(),
     };
 
     let cpi_program = _ctx.accounts.token_program.to_account_info();
 
-    // Signer seeds for vault authority (if the vault is a PDA)
+    let binding = token_vault_account.mint.key();
     let seeds = &[
-        CREATE_ORDER.as_ref(),
-        order.created_by.as_ref(),
-        &[_ctx.bumps.order_owner_asset_details],
+        CREATE_VAULT_STATE.as_ref(),
+        binding.as_ref(),
+        &[_ctx.bumps.create_vault_state],
     ];
-
     let signer_seeds = &[&seeds[..]];
 
-    let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
+    // Log seeds for debugging
+    msg!("Seeds in Claim Prize : {:?}", seeds);
+    msg!("Signer Seeds in Claim Prize : {:?}", signer_seeds);
 
+    let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
     token::transfer(cpi_ctx, token_contribution.amount)?;
 
     Ok(())
 }
+
 
 #[derive(Accounts)]
 pub struct ClaimPrize<'info> {
@@ -72,13 +79,21 @@ pub struct ClaimPrize<'info> {
 
     #[account(
         mut,
-        seeds = [CREATE_ORDER.as_ref(), order.created_by.as_ref()],
+        seeds = [
+            CREATE_VAULT.as_ref(),
+            token_vault_account.mint.key().as_ref() 
+        ],
         bump
     )]
-    pub order_owner_asset_details: Account<'info, UserAssetDetails>,
-
-    #[account(mut)]
     pub token_vault_account: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(mut, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump)]
+    pub trustlock_account: Box<Account<'info, CreateTrustLockAccountState>>,
+
+    pub token_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(mut, seeds=[CREATE_VAULT_STATE.as_ref(), token_mint.key().as_ref()], bump)]
+    pub create_vault_state: Box<Account<'info, CreateVaultState>>,
 
     #[account(
         mut,

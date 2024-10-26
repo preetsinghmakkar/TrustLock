@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { BankrunProvider } from "anchor-bankrun";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { BN, Program } from "@coral-xyz/anchor";
 
 import {
@@ -66,7 +66,7 @@ describe("Trust Lock Tests", () => {
         {
           address: user.publicKey,
           info: {
-            lamports: 4_000_000_000,
+            lamports: 5_000_000_000,
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
             executable: false,
@@ -75,7 +75,7 @@ describe("Trust Lock Tests", () => {
         {
           address: admin.publicKey,
           info: {
-            lamports: 4_000_000_000,
+            lamports: 5_000_000_000,
             data: Buffer.alloc(0),
             owner: SYSTEM_PROGRAM_ID,
             executable: false,
@@ -127,20 +127,6 @@ describe("Trust Lock Tests", () => {
       program.programId
     );
 
-    [create_vault_state] = PublicKey.findProgramAddressSync(
-      [Buffer.from("Create_Vault"), Buffer.from(admin.publicKey.toBuffer())],
-      program.programId
-    );
-
-    [token_vault] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("Create_Vault"),
-        Buffer.from(admin.publicKey.toBuffer()),
-        Buffer.from(mint.toBuffer()),
-      ],
-      program.programId
-    );
-
     // Initialize Config Account
     let tx = await program.methods
       .initializeTrustlockConfiguration(index, mint_whitelist)
@@ -155,6 +141,16 @@ describe("Trust Lock Tests", () => {
     const trust_lock_config_data = await program.account.trustLockConfig.fetch(
       initialize_trustlock_configuration,
       "confirmed"
+    );
+
+    [token_vault] = PublicKey.findProgramAddressSync(
+      [Buffer.from("Create_Vault"), Buffer.from(mint.toBuffer())],
+      program.programId
+    );
+
+    [create_vault_state] = PublicKey.findProgramAddressSync(
+      [Buffer.from("Create_Vault_State"), Buffer.from(mint.toBuffer())],
+      program.programId
     );
 
     const orderIdBuffer = Buffer.alloc(8);
@@ -270,6 +266,7 @@ describe("Trust Lock Tests", () => {
   });
 
   it("It Should Create Order", async () => {
+    console.log("Trying");
     let tx1 = await program.methods
       .createVault()
       .accounts({
@@ -283,6 +280,8 @@ describe("Trust Lock Tests", () => {
       .signers([admin])
       .rpc({ commitment: "confirmed" });
 
+    console.log("Trying1");
+
     let tx2 = await program.methods
       .createTrustlockAccount()
       .accounts({
@@ -292,6 +291,8 @@ describe("Trust Lock Tests", () => {
       })
       .signers([user])
       .rpc({ commitment: "confirmed" });
+
+    console.log("Trying2");
 
     // Here is the new code
     const userTokenAccount = await createAssociatedTokenAccount(
@@ -360,5 +361,721 @@ describe("Trust Lock Tests", () => {
     expect(user_trust_lock_account.accountNo.toNumber()).to.equal(0);
   });
 
-  it("Pitch for Order", async () => {});
+  it("Pitch for Order", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    const order_account_data = await program.account.createOrderAccount.fetch(
+      create_order_account,
+      "confirmed"
+    );
+
+    console.log("Order Account Data:", JSON.stringify(order_account_data));
+
+    console.log("Pitchers : ", order_account_data.pitchers);
+    console.log("User : ", user.publicKey.toBase58());
+
+    // Convert pitchers to their base58 representations
+    const pitcherAddresses = order_account_data.pitchers.map((pitcher) =>
+      pitcher.toBase58()
+    );
+
+    // Log to verify the conversion
+    console.log("Converted Pitcher Addresses: ", pitcherAddresses);
+    console.log("User Address: ", user.publicKey.toBase58());
+
+    const pitcherBase58List = order_account_data.pitchers.map((pitcher) =>
+      pitcher.toBase58()
+    );
+
+    console.log("Converted Pitcher Addresses:", pitcherBase58List);
+    console.log("User Address:", user.publicKey.toBase58());
+
+    const userIsPitcher = pitcherBase58List.includes(user.publicKey.toBase58());
+
+    expect(userIsPitcher).to.be.true;
+  });
+
+  it("Order creator can pick a Picther", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    let tx5 = await program.methods
+      .choosePitcher(index, user.publicKey)
+      .accounts({
+        signer: user.publicKey,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Pitcher Picked By Admin : ", tx5);
+
+    const order_account_data = await program.account.createOrderAccount.fetch(
+      create_order_account,
+      "confirmed"
+    );
+
+    const user_trust_lock_account =
+      await program.account.createTrustLockAccountState.fetch(
+        create_trustlock_account,
+        "confirmed"
+      );
+
+    console.log("Order Account Data:", JSON.stringify(order_account_data));
+    console.log("User Account Data:", JSON.stringify(user_trust_lock_account));
+  });
+
+  it("Fulfiller can Notify of Order Completion : ", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    let tx5 = await program.methods
+      .choosePitcher(index, user.publicKey)
+      .accounts({
+        signer: user.publicKey,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Pitcher Picked By Admin : ", tx5);
+
+    let tx6 = await program.methods
+      .orderCompleted()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx6 : ", tx6);
+
+    const order_account_data = await program.account.createOrderAccount.fetch(
+      create_order_account,
+      "confirmed"
+    );
+
+    const user_trust_lock_account =
+      await program.account.createTrustLockAccountState.fetch(
+        create_trustlock_account,
+        "confirmed"
+      );
+
+    console.log("Order Account Data:", JSON.stringify(order_account_data));
+    console.log("User Account Data:", JSON.stringify(user_trust_lock_account));
+  });
+
+  it("Order Review by Owner", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    let tx5 = await program.methods
+      .choosePitcher(index, user.publicKey)
+      .accounts({
+        signer: user.publicKey,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Pitcher Picked By Admin : ", tx5);
+
+    let tx6 = await program.methods
+      .orderCompleted()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx6 : ", tx6);
+
+    let tx7 = await program.methods
+      .orderReviewByOwner()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("TX7 : ", tx7);
+
+    const order_account_data = await program.account.createOrderAccount.fetch(
+      create_order_account,
+      "confirmed"
+    );
+
+    const user_trust_lock_account =
+      await program.account.createTrustLockAccountState.fetch(
+        create_trustlock_account,
+        "confirmed"
+      );
+
+    console.log("Order Account Data:", JSON.stringify(order_account_data));
+    console.log("User Account Data:", JSON.stringify(user_trust_lock_account));
+  });
+
+  it("Claim Prize", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    let tx5 = await program.methods
+      .choosePitcher(index, user.publicKey)
+      .accounts({
+        signer: user.publicKey,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Pitcher Picked By Admin : ", tx5);
+
+    let tx6 = await program.methods
+      .orderCompleted()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx6 : ", tx6);
+
+    let tx7 = await program.methods
+      .orderReviewByOwner()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("TX7 : ", tx7);
+
+    let tx8 = await program.methods
+      .claimPrize()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        tokenVaultAccount: token_vault,
+        tokenMint: mint,
+        createVaultState: create_vault_state,
+        trustlockAccount: create_trustlock_account,
+        fulfillerTokenAccount: userTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx8 : ", tx8);
+  });
+
+  it("Order Closed", async () => {
+    let tx1 = await program.methods
+      .createVault()
+      .accounts({
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        tokenMint: mint,
+        tokenVault: token_vault, // Pass the associated token account
+        createVaultState: create_vault_state,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([admin])
+      .rpc({ commitment: "confirmed" });
+
+    let tx2 = await program.methods
+      .createTrustlockAccount()
+      .accounts({
+        signer: user.publicKey,
+        trustLockConfigAccount: initialize_trustlock_configuration,
+        createTrustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc({ commitment: "confirmed" });
+
+    // Here is the new code
+    const userTokenAccount = await createAssociatedTokenAccount(
+      banksClient,
+      user, // Payer
+      mint, // Mint
+      user.publicKey // Owner of the new token account
+    );
+
+    await mintTo(
+      banksClient,
+      admin, // Payer (admin mints the tokens)
+      mint, // Mint
+      userTokenAccount, // Destination (user's token account)
+      admin, // Authority (admin can mint tokens)
+      1000 * anchor.web3.LAMPORTS_PER_SOL // Mint amount
+    );
+
+    const tx3 = await program.methods
+      .createOrder(
+        index,
+        "Sample Demand",
+        null,
+        new anchor.BN(100 * anchor.web3.LAMPORTS_PER_SOL)
+      )
+      .accounts({
+        signer: user.publicKey,
+        createOrderAccount: create_order_account,
+        userTokenAccount: userTokenAccount,
+        tokenMint: mint,
+        tokenVaultAccount: token_vault,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        trustlockAccount: create_trustlock_account,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction in create order : ", tx3);
+
+    let tx4 = await program.methods
+      .pitchForOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        trustlockAccount: create_trustlock_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Transaction of Pitch order ", tx4);
+
+    let tx5 = await program.methods
+      .choosePitcher(index, user.publicKey)
+      .accounts({
+        signer: user.publicKey,
+        trustlockConfigAccount: initialize_trustlock_configuration,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Pitcher Picked By Admin : ", tx5);
+
+    let tx6 = await program.methods
+      .orderCompleted()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx6 : ", tx6);
+
+    let tx7 = await program.methods
+      .orderReviewByOwner()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("TX7 : ", tx7);
+
+    let tx8 = await program.methods
+      .claimPrize()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+        tokenVaultAccount: token_vault,
+        tokenMint: mint,
+        createVaultState: create_vault_state,
+        trustlockAccount: create_trustlock_account,
+        fulfillerTokenAccount: userTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("Tx8 : ", tx8);
+
+    let tx9 = await program.methods
+      .closeOrder()
+      .accounts({
+        signer: user.publicKey,
+        order: create_order_account,
+      })
+      .signers([user])
+      .rpc();
+
+    console.log("TX9 : ", tx9);
+  });
 });

@@ -13,8 +13,9 @@ pub struct CreateTrustLockAccountState {
 }
 
 impl CreateTrustLockAccountState {
-    pub const LEN: usize = 32 // Pubkey
+    pub const LEN: usize = 8 + 32 // Pubkey
     + 8  // u64
     + 4 + 8 + 8 + (20 * 8) // Vec<u64> my_opened_orders
-    + 4 + 8 + 8 + (20 * 8) + 32 + 4 + (8 + 32 + 8 + 32 + 8) * 50;
+    + 4 + 8 + 8 + (20 * 8) 
+    + 32 + 4 + (8 + 32 + 8 + 32 + 8) * 50; // contributions
 }

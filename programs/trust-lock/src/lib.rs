@@ -65,37 +65,37 @@ pub mod trust_lock {
     }
 
     // //Pitch
-    // pub fn pitch_for_order(_ctx: Context<PitchForOrder>, order_id: u64) -> Result<()> {
-    //     instructions::pitch_for_order(_ctx, order_id)?;
-    //     Ok(())
-    // }
+    pub fn pitch_for_order(_ctx: Context<PitchForOrder>) -> Result<()> {
+        instructions::pitch_for_order(_ctx)?;
+        Ok(())
+    }
 
-    // pub fn choose_pitcher(
-    //     _ctx: Context<ChoosePitcher>,
-    //     _order_id: u64,
-    //     _pitcher: Pubkey,
-    // ) -> Result<()> {
-    //     instructions::choose_pitcher(_ctx, _order_id, _pitcher)?;
-    //     Ok(())
-    // }
+    pub fn choose_pitcher(
+        _ctx: Context<ChoosePitcher>,
+        _index: u8,
+        _pitcher: Pubkey,
+    ) -> Result<()> {
+        instructions::choose_pitcher(_ctx, _index, _pitcher)?;
+        Ok(())
+    }
 
-    // pub fn order_completed(_ctx: Context<OrderCompleted>) -> Result<()> {
-    //     instructions::order_completed(_ctx)?;
-    //     Ok(())
-    // }
+    pub fn order_completed(_ctx: Context<OrderCompleted>) -> Result<()> {
+        instructions::order_completed(_ctx)?;
+        Ok(())
+    }
 
-    // pub fn order_review_by_owner(_ctx: Context<OrderReview>) -> Result<()> {
-    //     instructions::order_review_by_owner(_ctx)?;
-    //     Ok(())
-    // }
+    pub fn order_review_by_owner(_ctx: Context<OrderReview>) -> Result<()> {
+        instructions::order_review_by_owner(_ctx)?;
+        Ok(())
+    }
 
-    // pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
-    //     instructions::claim_prize(_ctx)?;
-    //     Ok(())
-    // }
+    pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
+        instructions::claim_prize(_ctx)?;
+        Ok(())
+    }
 
-    // pub fn close_order(_ctx: Context<CloseOrder>) -> Result<()> {
-    //     instructions::close_order(_ctx)?;
-    //     Ok(())
-    // }
+    pub fn close_order(_ctx: Context<CloseOrder>) -> Result<()> {
+        instructions::close_order(_ctx)?;
+        Ok(())
+    }
 }

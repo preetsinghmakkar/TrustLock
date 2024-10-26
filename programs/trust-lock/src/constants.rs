@@ -4,6 +4,7 @@ pub const INTIALIZE_CONFIG: &[u8] = b"Config_Initialized";
 pub const INITIALIZE_TRUSTLOCK_ACCOUNT: &[u8] = b"TrustLock_Account";
 pub const CREATE_ORDER: &[u8] = b"Create_Order";
 pub const CREATE_VAULT: &[u8] = b"Create_Vault";
+pub const CREATE_VAULT_STATE: &[u8] = b"Create_Vault_State";
 pub const USERASSETDETAILSACCOUNT: &[u8] = b"User_Asset_Details";
 
 pub const MAX_CONTRIBUTIONS: usize = 100;
@@ -17,8 +18,6 @@ pub enum OrderStatus {
     FULFILLED,
     CANCELLED,
 }
-
-// Change Fulfiler Status and Add Like - OrderPicked, OrderDelivered, OrderProcessing
 
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub enum FulfillerStatus {

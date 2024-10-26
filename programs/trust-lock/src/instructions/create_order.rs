@@ -16,36 +16,23 @@ pub fn create_order(
     _amount: u64,
 ) -> Result<()> {
 
-    msg!("Create Order Function Started");
 
     let create_order_account = &mut _ctx.accounts.create_order_account;
-
-    msg!("Create Order Function 1");
-
     let trustlock_config_account = &mut _ctx.accounts.trustlock_config_account;
-
-    msg!("Create Order Function 2");
-
     let user_token_account = &mut _ctx.accounts.user_token_account;
     let token_vault_account = &mut _ctx.accounts.token_vault_account;
-    // let user_asset_details = &mut _ctx.accounts.user_asset_details;
-    msg!("Create Order Function 3");
     let signer = &mut _ctx.accounts.signer;
     let trustlock_account = &mut _ctx.accounts.trustlock_account;
     let mint_account = &mut _ctx.accounts.token_mint;
-    msg!("Create Order Function 4");
     if user_token_account.amount < _amount {
         return Err(error!(ErrorCode::InsufficientFunds));
     }
 
-    msg!("Create Order Function 5");
-
-    // // Ensure the mint is supported
+    // Ensure the mint is supported
     let is_supported = trustlock_config_account.is_supported(&mint_account)?;
 
     require!(is_supported, ErrorCode::TokenNotSupported);
 
-    msg!("Create Order Function 6");
 
     create_order_account.order_id = trustlock_config_account.order_id;
     trustlock_config_account.order_id = trustlock_config_account
@@ -56,8 +43,6 @@ pub fn create_order(
     create_order_account.demand = _demand;
 
     create_order_account.created_by = signer.key();
-
-    msg!("Create Order Function 7");
 
     create_order_account.amount = _amount;
 
@@ -71,8 +56,6 @@ pub fn create_order(
 
     create_order_account.fulfiller_status = FulfillerStatus::INACTIVE;
 
-    msg!("Create Order Function 7");
-
    // After Creating Order User should transfer money to the vault.
 
     // Token transfer via CPI
@@ -84,8 +67,6 @@ pub fn create_order(
     let cpi_program = _ctx.accounts.token_program.to_account_info();
     let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
     token::transfer(cpi_ctx, _amount)?;
-
-    msg!("Create Order Function 8");
 
     // Record user's token contribution
     let token_mint = _ctx.accounts.token_mint.key(); // Get the mint key
@@ -114,8 +95,6 @@ pub fn create_order(
     trustlock_account
         .my_opened_orders
         .push(trustlock_config_account.order_id);
-
-        msg!("Create Order Function 9");
        
 
     Ok(())
@@ -145,11 +124,6 @@ pub struct CreateOrder<'info> {
 
     #[account(mut, seeds=[INTIALIZE_CONFIG.as_ref(), &_index.to_be_bytes()], bump)]
     pub trustlock_config_account: Box<Account<'info, TrustLockConfig>>,
-
-    // #[account(init, payer = signer, seeds = [USERASSETDETAILSACCOUNT.as_ref(), signer.key().as_ref()], bump, space=UserAssetDetails::LEN)]
-    // pub user_asset_details: Account<'info, UserAssetDetails>,
-
-
 
     #[account(mut, seeds=[INITIALIZE_TRUSTLOCK_ACCOUNT.as_ref(), signer.key().as_ref()], bump)]
     pub trustlock_account: Box<Account<'info, CreateTrustLockAccountState>>,

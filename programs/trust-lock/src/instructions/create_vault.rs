@@ -1,4 +1,4 @@
-use crate::constants::CREATE_VAULT;
+use crate::constants::{CREATE_VAULT, CREATE_VAULT_STATE};
 use crate::errors::ErrorCode;
 use crate::{CreateVaultState, TrustLockConfig};
 use anchor_lang::prelude::*;
@@ -42,7 +42,6 @@ pub struct CreateVault<'info> {
         init_if_needed,
         seeds = [
             CREATE_VAULT.as_ref(),
-            admin.key().as_ref(),
             token_mint.key().as_ref(),
         ],
         bump,
@@ -53,7 +52,7 @@ pub struct CreateVault<'info> {
     )]
     pub token_vault: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(init, payer=admin, seeds=[CREATE_VAULT.as_ref(), admin.key().as_ref()], bump, space= 8 + CreateVaultState::INIT_SPACE)]
+    #[account(init, payer=admin, seeds=[CREATE_VAULT_STATE.as_ref(), token_mint.key().as_ref()], bump, space= 8 + CreateVaultState::INIT_SPACE)]
     pub create_vault_state: Account<'info, CreateVaultState>,
 
     /// SPL Token program (or Token 2022 program)

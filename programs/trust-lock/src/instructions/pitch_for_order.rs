@@ -4,7 +4,7 @@ use crate::CreateTrustLockAccountState;
 use crate::{constants::CREATE_ORDER, CreateOrderAccount};
 use anchor_lang::prelude::*;
 
-pub fn pitch_for_order(_ctx: Context<PitchForOrder>, _order_id: u64) -> Result<()> {
+pub fn pitch_for_order(_ctx: Context<PitchForOrder>) -> Result<()> {
     let signer = &mut _ctx.accounts.signer;
     let order = &mut _ctx.accounts.order;
     let trustlock_account = &mut _ctx.accounts.trustlock_account;
@@ -27,7 +27,6 @@ pub fn pitch_for_order(_ctx: Context<PitchForOrder>, _order_id: u64) -> Result<(
 }
 
 #[derive(Accounts)]
-#[instruction(_order_id : u64)]
 pub struct PitchForOrder<'info> {
     #[account(mut)]
     pub signer: Signer<'info>,

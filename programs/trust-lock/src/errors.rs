@@ -50,6 +50,9 @@ pub enum ErrorCode {
     #[msg("Fulfiler Not Fulfilled the Order")]
     FulfillerNotFulfilled,
 
+    #[msg("Order Not Fulfilled")]
+    OrderNotFulfilled,
+
     #[msg("Order Already Closed or Fulfilled")]
     OrderAlreadyClosedOrFulfilled,
 }
