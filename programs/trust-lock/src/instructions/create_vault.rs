@@ -47,7 +47,7 @@ pub struct CreateVault<'info> {
         bump,
         payer = admin,
         token::mint = token_mint,
-        token::authority = create_vault_state,
+        token::authority = token_vault,
         token::token_program = token_program,
     )]
     pub token_vault: InterfaceAccount<'info, TokenAccount>,

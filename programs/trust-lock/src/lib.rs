@@ -30,7 +30,7 @@ pub mod trust_lock {
         Ok(())
     }
 
-    //Update Allowed Tokens WhiteList
+    // Update Allowed Tokens WhiteList
     pub fn update_whitelist(
         _ctx: Context<UpdateWhitelist>,
         new_whitelist: Vec<Pubkey>,

@@ -1,9 +1,9 @@
 use crate::constants::{
-    FulfillerStatus, OrderStatus, CREATE_ORDER, CREATE_VAULT, CREATE_VAULT_STATE,
+    FulfillerStatus, OrderStatus, CREATE_ORDER, CREATE_VAULT,
     INITIALIZE_TRUSTLOCK_ACCOUNT,
 };
 use crate::errors::ErrorCode;
-use crate::{CreateOrderAccount, CreateTrustLockAccountState, CreateVaultState};
+use crate::{CreateOrderAccount, CreateTrustLockAccountState};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Transfer};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -14,7 +14,6 @@ pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     let trust_lock_account = &mut _ctx.accounts.trustlock_account;
     let token_vault_account = &mut _ctx.accounts.token_vault_account;
     let fulfiller_token_account = &mut _ctx.accounts.fulfiller_token_account;
-    let create_vault_state = &mut _ctx.accounts.create_vault_state;
 
     // Authorization checks
     if order.order_fulfiller != signer.key()
@@ -41,16 +40,16 @@ pub fn claim_prize(_ctx: Context<ClaimPrize>) -> Result<()> {
     let cpi_accounts = Transfer {
         from: token_vault_account.to_account_info(),
         to: fulfiller_token_account.to_account_info(),
-        authority: create_vault_state.to_account_info(),
+        authority: token_vault_account.to_account_info(),
     };
 
     let cpi_program = _ctx.accounts.token_program.to_account_info();
 
     let binding = token_vault_account.mint.key();
     let seeds = &[
-        CREATE_VAULT_STATE.as_ref(),
+        CREATE_VAULT.as_ref(),
         binding.as_ref(),
-        &[_ctx.bumps.create_vault_state],
+        &[_ctx.bumps.token_vault_account],
     ];
     let signer_seeds = &[&seeds[..]];
 
@@ -91,9 +90,6 @@ pub struct ClaimPrize<'info> {
     pub trustlock_account: Box<Account<'info, CreateTrustLockAccountState>>,
 
     pub token_mint: InterfaceAccount<'info, Mint>,
-
-    #[account(mut, seeds=[CREATE_VAULT_STATE.as_ref(), token_mint.key().as_ref()], bump)]
-    pub create_vault_state: Box<Account<'info, CreateVaultState>>,
 
     #[account(
         mut,
